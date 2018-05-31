@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>无标题文档</title>
+
+<style type="text/css">
+	
+	.header {
+		background-color: #eee;
+		height: 20px;
+	}
+	
+	table tr td {
+		width:10%;
+		text-align: center;
+		border: 1px #ccc solid;
+	}
+</style>
+
+
+</head>
+<body>
+<!--
+
+正常的设置rowspan=级数, 同时将第rowspan行以内同列的td删除
+有子列的设置colspan=子列数, 同时将从当前列算起删除掉colspan个td
+
+-->
+<table id="table" width=800 border="0" cellspacing="0" cellpadding="0">
+
+	<!--
+	<tr class="header">
+		<td rowspan=3>a</td><td rowspan=3>b</td><td colspan=3>c</td>
+	</tr>
+	<tr class="header">
+		<td rowspan=2>c1</td><td colspan=2>c2</td>
+	</tr>
+	<tr class="header">
+		<td >c21</td><td>c22</td>
+	</tr>
+	-->
+	
+</table>
+
+<script>
+	var cols = [
+		{
+			value: 'a',
+			//rowspan: 3,
+			//allLeafLength: 1,
+			//depth: 1,
+			columns: [
+				{
+					value: 'a1',
+				}, {
+					value: 'a2',
+					columns: [
+						{
+							value: 'a21',
+						}
+					]
+				}
+			]
+		}, {
+			value: 'b'
+		}
+	];
+	
+	/**
+		获取所有的叶子节点
+					
+		叶子节点的rowspan = maxDepth - depth;
+		叶子节点的所有父节点rowspan都为1
+		
+	*/
+	
+	
+	Object.prototype.getAllLeafLength = function() {
+		var me = this;
+		//this.allLeafLength = this.allLeafLength || 0;
+		this.allLeafLength = 0;
+		if(this.columns) {
+			this.columns.forEach(function(c, i) {
+				me.allLeafLength += c.getAllLeafLength();
+			});
+			return this.allLeafLength;
+		} else {
+			return this.allLeafLength = 1;
+		}
+	}
+	
+	Object.prototype.setParentRowspan = function() {
+		
+		var c = this;
+		
+		if(!c.columns) {
+			while(c = c.parent) {
+				c.rowspan = 1;
+			}
+		}
+	}
+	
+	
+	var arr = function (data) {
+		
+		var arr = [];
+		
+		// 获取多级表头层级数
+		var maxDepth = function() {
+			var maxDepth = 1;
+			function getDepth(col, depath) {
+				if(col.columns) {
+					maxDepth ++;
+					col.columns.forEach(function(c) {
+						getDepth(c);
+					});
+				}
+			}
+			cols.forEach(function(col) {
+				getDepth(col, maxDepth);
+			});
+			
+			return maxDepth;
+		}();
+		
+		
+		// 设置节点的depth, parent操作
+		function initCol(col, level) {
+		
+			col.allLeafLength = col.getAllLeafLength();
+			col.depth = level;
+			
+			if(!arr[level - 1]) {
+				arr[level - 1] = [];
+			}
+			arr[level - 1].push(col);
+		
+			level ++;
+			
+			if(col.columns) {
+				col.columns.forEach(function(it, i) {
+					it.parent = col;
+					initCol(it, level);
+				});
+				
+			} else {
+				/**
+					叶子节点的rowspan = maxDepth - depth + 1;
+					叶子节点的所有父节点rowspan都为1
+				*/
+				col.rowspan = maxDepth - col.depth + 1;
+				col.setParentRowspan();
+			}
+		}
+	
+		cols.forEach(function(col, i) {
+			initCol(col, 1);
+		});
+		
+		return arr;
+	
+	}();
+	
+	console.log(arr);
+	
+	
+	
+	
+	arr.forEach(function(row, i) {
+		
+		var tr = document.createElement('tr');
+		tr.setAttribute('class', 'header');
+		
+		row.forEach(function(col) {
+			var td = document.createElement('td');
+			
+			col.rowspan == 1 || td.setAttribute('rowspan', col.rowspan);
+			col.allLeafLength == 1 || td.setAttribute('colspan', col.allLeafLength);
+			td.innerHTML = col.value;
+			
+			tr.appendChild(td);
+		});
+		table.appendChild(tr);
+	});
+	
+	
+	
+	
+	
+	
+</script>
+	
+	
+	
+</div>
+</body>
+</html>
